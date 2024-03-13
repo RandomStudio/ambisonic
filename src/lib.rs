@@ -60,6 +60,7 @@ pub mod constants;
 pub mod sources;
 pub use bmixer::{bmixer, BmixerComposer, BstreamMixer};
 pub use bstream::{bstream, Bstream, BstreamConfig, SoundController};
+use renderer::MultiSpeakerConfig;
 pub use renderer::{BstreamHrtfRenderer, BstreamStereoRenderer, HrtfConfig, StereoConfig};
 pub use rodio;
 
@@ -73,6 +74,8 @@ pub enum PlaybackConfiguration {
 
     /// Headphone playback using head related transfer functions
     Hrtf(HrtfConfig),
+
+    MultiSpeaker(MultiSpeakerConfig),
 }
 
 impl Default for PlaybackConfiguration {
@@ -127,6 +130,10 @@ impl AmbisonicBuilder {
             PlaybackConfiguration::Hrtf(cfg) => {
                 let output = renderer::BstreamHrtfRenderer::new(mixer, cfg);
                 sink.append(output);
+            }
+
+            PlaybackConfiguration::MultiSpeaker(cfg) => {
+                let output = renderer::BstreamMultiSpeakerRenderer::
             }
         }
 

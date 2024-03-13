@@ -9,6 +9,79 @@ use rodio::Source;
 
 use crate::bformat::{Bformat, Bweights};
 
+pub struct MultiSpeakerConfig {
+    speakers: Vec<Bweights>,
+}
+
+impl MultiSpeakerConfig {
+    pub fn add_speaker(&mut self, position: [f32; 3]) {
+        let speaker = Bweights::from_position(position);
+        self.speakers.push(speaker);
+    }
+}
+
+pub struct BstreamMultiSpeakerRenderer<I> {
+    input: I,
+    buffered_sample: Option<f32>,
+    speakers: Vec<Bweights>,
+}
+
+impl<I> Source for BstreamMultiSpeakerRenderer<I>
+where
+    I: Source<Item = Bformat>,
+{
+    #[inline(always)]
+    fn current_frame_len(&self) -> Option<usize> {
+        self.input.current_frame_len()
+    }
+
+    #[inline(always)]
+    fn channels(&self) -> u16 {
+        self.speakers.len() as u16
+    }
+
+    #[inline(always)]
+    fn sample_rate(&self) -> u32 {
+        self.input.sample_rate()
+    }
+
+    #[inline(always)]
+    fn total_duration(&self) -> Option<Duration> {
+        self.input.total_duration()
+    }
+}
+
+impl Default for BstreamMultiSpeakerRenderer {}
+
+impl<I> Iterator for BstreamMultiSpeakerRenderer<I>
+where
+    I: Source<Item = Bformat>,
+{
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.buffered_sample.take() {
+            Some(s) => Some(s),
+            None => {
+                let sample = self.input.next()?;
+
+                for speaker in self.speakers.iter() {
+                    let output = speaker.dot(sample);
+                }
+
+                Some(0.)
+
+                // let left = self.left_mic.dot(sample);
+                // let right = self.right_mic.dot(sample);
+
+                // emit left channel now, and right channel next time
+                // self.buffered_sample = Some(right);
+                // Some(left)
+            }
+        }
+    }
+}
+
 /// Stereo Playback configuration
 ///
 /// Playback over two physical speakers in front of the listener. For best results both speakers
